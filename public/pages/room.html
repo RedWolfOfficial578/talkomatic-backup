@@ -1,0 +1,801 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#000000" />
+    <title>Chat Room - Talkomatic</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
+      integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+    <link rel="stylesheet" href="stylesheets/room.css?v=3.3.0" />
+    <link rel="stylesheet" href="stylesheets/info-modal.css?v=1.2.0" />
+    <link rel="stylesheet" href="stylesheets/talkoboard.css?v=4.7.1" />
+    <link rel="stylesheet" href="stylesheets/games.css?v=3.15.0" />
+    <link rel="stylesheet" href="stylesheets/polls.css?v=1.0.0" />
+    <!-- Applies the saved custom theme before first paint -->
+    <link rel="stylesheet" href="stylesheets/effects.css?v=1.3.3" />
+    <link rel="stylesheet" href="stylesheets/announce.css?v=1.1.0" />
+    <link rel="stylesheet" href="stylesheets/interview.css?v=1.0.0" />
+    <script src="js/theme-engine.js?v=2.4.1"></script>
+    <link rel="stylesheet" href="stylesheets/halloween.css" />
+    <script src="js/halloween.js"></script>
+    <link rel="stylesheet" href="stylesheets/theme-editor.css?v=1.1.0" />
+    <link rel="icon" type="image/png" href="images/icons/favicon.png" />
+    <style>
+      /* Emote system */
+      .emote-autocomplete {
+        position: absolute;
+        z-index: 1000;
+        background-color: #333;
+        border: 1px solid #555;
+        border-radius: 4px;
+        max-height: 300px;
+        overflow-y: auto;
+        width: 200px;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+        display: none;
+      }
+      .emote-autocomplete-header {
+        padding: 5px 10px;
+        font-weight: bold;
+        border-bottom: 1px solid #555;
+        color: #eee;
+      }
+      .emote-autocomplete-list {
+        max-height: 250px;
+        overflow-y: auto;
+      }
+      .emote-autocomplete-item {
+        display: flex;
+        align-items: center;
+        padding: 8px 10px;
+        cursor: pointer;
+        border-bottom: 1px solid #444;
+        color: #fff;
+      }
+      .emote-autocomplete-item.selected,
+      .emote-autocomplete-item:hover {
+        background-color: #555;
+      }
+      .emote-autocomplete-item img {
+        width: auto;
+        height: 20px;
+        margin-right: 10px;
+        vertical-align: middle;
+      }
+      .emotes-button {
+        padding: 5px 10px;
+        background-color: #444;
+        color: var(--tk-text);
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .emotes-dropdown {
+        background-color: #333;
+        border: 1px solid #555;
+        border-radius: 4px;
+        padding: 10px;
+        z-index: 1000;
+        max-width: 300px;
+        max-height: 300px;
+        overflow-y: auto;
+        display: none;
+        flex-wrap: wrap;
+        gap: 5px;
+      }
+      .emote-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 5px;
+        cursor: pointer;
+        border-radius: 4px;
+        background-color: #444;
+        width: 60px;
+        height: 60px;
+        transition: background-color 0.2s ease;
+      }
+      .emote-item:hover {
+        background-color: #555;
+      }
+      .emote-item img {
+        width: 30px;
+        height: auto;
+      }
+      .emote-item span {
+        font-size: 10px;
+        color: var(--tk-text);
+        margin-top: 5px;
+        text-align: center;
+        word-break: break-all;
+      }
+      .chat-input {
+        background-color: var(--tk-chat-bg, #000) !important;
+        color: var(--tk-chat-text, orange) !important;
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+        outline: none !important;
+        white-space: pre-wrap !important;
+        word-break: break-word !important;
+      }
+      .emote {
+        display: inline-block;
+        vertical-align: middle;
+        width: auto;
+        height: 20px;
+        margin: 0 2px;
+      }
+
+      /* App directory */
+      .app-directory-toggle {
+        background: none;
+        border: none;
+        color: var(--tk-text);
+        cursor: pointer;
+        padding: 8px 12px;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 14px;
+        font-family: inherit;
+        transition: background-color 0.2s ease;
+        margin: 0 2px;
+        margin-right: 8px;
+      }
+      .app-directory-toggle:hover {
+        background-color: color-mix(in srgb, var(--tk-accent) 10%, transparent);
+      }
+      .app-directory-toggle img {
+        width: 18px;
+        height: 18px;
+      }
+      .app-directory-dropdown {
+        position: absolute;
+        top: 100%;
+        right: 120px;
+        background-color: var(--tk-bg);
+        border: 1px solid var(--tk-border);
+        border-radius: 8px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        z-index: 10000;
+        min-width: 280px;
+        max-width: 320px;
+        display: none;
+        padding: 1rem;
+        margin-top: 5px;
+        /* The list has outgrown short windows, so let it scroll instead of
+           running off the bottom of the screen. */
+        max-height: min(70vh, 560px);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+      }
+      .app-directory-dropdown::-webkit-scrollbar {
+        width: 8px;
+      }
+      .app-directory-dropdown::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .app-directory-dropdown::-webkit-scrollbar-thumb {
+        background: var(--tk-border);
+        border-radius: 4px;
+      }
+      .app-directory-dropdown::-webkit-scrollbar-thumb:hover {
+        background: var(--tk-accent);
+      }
+      .app-directory-dropdown.show {
+        display: block;
+        animation: fadeInDown 0.2s ease-out;
+      }
+      @keyframes fadeInDown {
+        from {
+          opacity: 0;
+          transform: translateY(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .app-directory-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--tk-accent);
+        font-size: 15px;
+        font-weight: bold;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid var(--tk-border);
+      }
+      .app-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+      }
+      .app-item {
+        display: flex;
+        align-items: center;
+        padding: 12px;
+        border-radius: 6px;
+        background-color: var(--tk-card);
+        border: 1px solid var(--tk-border);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-decoration: none;
+        color: var(--tk-text);
+      }
+      .app-item:hover {
+        border-color: var(--tk-accent);
+        background-color: var(--tk-tile);
+        transform: translateY(-1px);
+      }
+      .app-item.disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+      .app-item.disabled:hover {
+        border-color: var(--tk-border);
+        background-color: var(--tk-card);
+        transform: none;
+      }
+      /* Each app's icon sits on a dark tile and carries its own colour; the
+         old orange gradient swallowed the glyph. */
+      .app-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        flex-shrink: 0;
+        border-radius: 6px;
+        margin-right: 12px;
+        background-color: var(--tk-tile, #1b1b1b);
+        border: 1px solid #333;
+        font-size: 15px;
+      }
+      .app-info {
+        flex: 1;
+        min-width: 0;
+      }
+      .app-name {
+        font-size: 14px;
+        font-weight: bold;
+        color: var(--tk-text);
+        margin-bottom: 2px;
+      }
+      .app-description {
+        font-size: 12px;
+        color: #cccccc;
+        line-height: 1.3;
+      }
+      .app-enter {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        flex-shrink: 0;
+        margin-left: 10px;
+        padding: 6px 11px;
+        border-radius: 4px;
+        background: var(--tk-accent);
+        color: #000;
+        font-size: 11px;
+        font-weight: bold;
+        transition: background 0.15s ease;
+      }
+      .app-item:hover .app-enter {
+        background: #ffa726;
+      }
+      .app-status {
+        flex-shrink: 0;
+        font-size: 10px;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-weight: bold;
+        text-transform: uppercase;
+        margin-left: 10px;
+      }
+      .status-coming-soon {
+        background: var(--tk-tile, #1b1b1b);
+        border: 1px solid var(--tk-border);
+        color: #9a9a9a;
+      }
+      @media (max-width: 768px) {
+        .app-directory-dropdown {
+          right: 10px;
+          left: 10px;
+          width: auto;
+          min-width: auto;
+          max-width: none;
+        }
+        .app-directory-toggle {
+          margin-right: 8px;
+          margin-left: 0;
+        }
+        .app-directory-toggle span {
+          display: none;
+        }
+      }
+      /* Navbar toggles: each icon keeps one colour so the row reads at a
+         glance. The filter shield is green when it protects you and red with
+         a slash when it is off, same slash the bots toggle draws. */
+      #muteToggle i {
+        font-size: 17px;
+        width: 20px;
+        color: #ffca28;
+      }
+      #muteToggle.sound-off i {
+        color: #8d8d8d;
+      }
+      #filterToggle {
+        position: relative;
+      }
+      #filterToggle i {
+        font-size: 17px;
+        color: #4ade80;
+        transition: color 0.2s ease;
+      }
+      #filterToggle.filter-off i {
+        color: #e5484d;
+      }
+      #filterToggle.filter-off::after {
+        content: "";
+        position: absolute;
+        left: 7px;
+        right: 7px;
+        top: 50%;
+        height: 2px;
+        background: #e5484d;
+        transform: rotate(-38deg);
+        border-radius: 2px;
+        pointer-events: none;
+      }
+      #layoutToggle {
+        font-size: 18px;
+        color: #5aa9ff;
+      }
+
+      /* Feature announcement modal: the house card - flat dark overlay, black
+         card with a cream header strip, square corners, orange fills. */
+      .feature-announce-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+        background: rgba(0, 0, 0, 0.78);
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+      }
+      .feature-announce-overlay.show {
+        display: flex;
+        animation: fadeIn 0.18s ease-out;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+      .feature-announce-box {
+        background: var(--tk-bg);
+        border: 1px solid var(--tk-border);
+        border-radius: 10px;
+        max-width: 440px;
+        width: 100%;
+        text-align: left;
+        overflow: hidden;
+      }
+      .feature-announce-head {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 15px 18px 13px;
+        border-bottom: 1px solid var(--tk-border);
+      }
+      .feature-announce-icon {
+        flex: none;
+        width: 38px;
+        height: 38px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 9px;
+        background: color-mix(in srgb, var(--tk-accent) 18%, var(--tk-tile));
+        color: var(--tk-accent);
+        font-size: 17px;
+      }
+      .feature-announce-title {
+        margin: 0;
+        color: var(--tk-accent);
+        font-size: 17px;
+        font-weight: bold;
+        line-height: 1.3;
+      }
+      .feature-announce-sub {
+        margin: 3px 0 0;
+        color: var(--tk-muted);
+        font-size: 12px;
+      }
+      .feature-announce-body {
+        padding: 14px 18px 18px;
+      }
+      .feature-announce-lead {
+        margin: 0 0 12px;
+        color: var(--tk-text);
+        font-size: 14px;
+        line-height: 1.55;
+      }
+      .feature-announce-ways {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 14px;
+        color: var(--tk-muted);
+        font-size: 12.5px;
+      }
+      .feature-announce-way {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border-radius: 5px;
+        background: var(--tk-tile);
+        color: var(--tk-text);
+        font-size: 12.5px;
+        font-weight: bold;
+      }
+      .feature-announce-way i {
+        color: var(--tk-muted);
+        font-size: 12px;
+      }
+      .feature-announce-way.code {
+        font-family: "Consolas", "Menlo", monospace;
+        color: var(--tk-accent);
+        background: color-mix(in srgb, var(--tk-accent) 12%, var(--tk-tile));
+      }
+      .feature-announce-row {
+        display: flex;
+        gap: 12px;
+        padding: 12px 13px 13px;
+        border-radius: 8px;
+        background: var(--tk-tile);
+      }
+      .feature-announce-row + .feature-announce-row {
+        margin-top: 8px;
+      }
+      .feature-announce-row-icon {
+        flex: none;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        font-size: 14px;
+      }
+      .feature-announce-row.ask .feature-announce-row-icon {
+        background: color-mix(in srgb, #4ade80 16%, var(--tk-bg));
+        color: #4ade80;
+      }
+      .feature-announce-row.vote .feature-announce-row-icon {
+        background: color-mix(in srgb, #5aa9ff 16%, var(--tk-bg));
+        color: #5aa9ff;
+      }
+      .feature-announce-row > div:last-child {
+        flex: 1;
+        min-width: 0;
+      }
+      .feature-announce-row b {
+        display: block;
+        margin: 2px 0 3px;
+        color: var(--tk-text);
+        font-size: 13.5px;
+      }
+      .feature-announce-row p {
+        margin: 0;
+        color: var(--tk-muted);
+        font-size: 12.5px;
+        line-height: 1.55;
+      }
+      .feature-announce-demo {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-top: 10px;
+      }
+      .feature-announce-bar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 12px;
+        color: var(--tk-text);
+      }
+      .feature-announce-bar span:first-child {
+        flex: none;
+        width: 64px;
+      }
+      .feature-announce-bar span:last-child {
+        flex: none;
+        width: 32px;
+        text-align: right;
+        color: var(--tk-muted);
+        font-weight: bold;
+      }
+      .feature-announce-bar.lead span:last-child {
+        color: var(--tk-accent);
+      }
+      .feature-announce-track {
+        flex: 1;
+        height: 7px;
+        border-radius: 4px;
+        background: var(--tk-bg);
+        overflow: hidden;
+      }
+      .feature-announce-fill {
+        height: 100%;
+        border-radius: 4px;
+        background: var(--tk-muted);
+      }
+      .feature-announce-bar.lead .feature-announce-fill {
+        background: var(--tk-accent);
+      }
+      .feature-announce-foot {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 16px;
+      }
+      .feature-announce-btn {
+        background: var(--tk-accent);
+        color: #1a1a1a;
+        border: none;
+        border-radius: 6px;
+        padding: 10px 18px;
+        min-height: 40px;
+        font-size: 14px;
+        font-weight: bold;
+        font-family: inherit;
+        cursor: pointer;
+        transition: filter 0.15s ease;
+      }
+      .feature-announce-btn:hover {
+        filter: brightness(1.1);
+      }
+
+      .user-info button.staff-action-button i.fas {
+        color: rgb(201, 201, 201) !important;
+      }
+      .user-info button.note-action-button.has-note i.fas {
+        color: #ffb74d !important;
+      }
+    </style>
+      <link rel="stylesheet" href="stylesheets/notify.css?v=1.1.0" />
+  </head>
+  <body>
+    <div class="page-container">
+      <nav class="top-navbar">
+        <div class="navbar-section navbar-left">
+          <div id="dateTime" class="date-time">
+            <span class="date"></span>
+            <span class="time"></span>
+          </div>
+        </div>
+        <div class="navbar-section navbar-center">
+          <div class="brand">Talkomatic™</div>
+        </div>
+        <div class="navbar-section navbar-right">
+          <button id="muteToggle" class="mute-toggle" aria-label="Toggle Sound">
+            <i class="fas fa-volume-high" id="muteIcon"></i>
+          </button>
+          <button
+            id="filterToggle"
+            class="mute-toggle"
+            aria-label="Toggle Word Filter"
+            title="Word Filter: ON (click to disable)"
+          >
+            <i class="fas fa-shield-halved"></i>
+          </button>
+          <button
+            id="layoutToggle"
+            class="mute-toggle"
+            aria-label="Switch layout"
+            title="Toggle layout"
+            style="display: none"
+          >
+            <i class="fas fa-bars"></i>
+          </button>
+          <button
+            id="hideBotsToggle"
+            class="mute-toggle hide-bots-toggle"
+            aria-label="Hide bots"
+            title="Hide bots from your view"
+          >
+            <i class="fas fa-robot"></i>
+          </button>
+          <button
+            id="appDirectoryToggle"
+            class="app-directory-toggle"
+            aria-label="Open App Directory"
+          >
+            <img src="images/icons/apps.png" alt="Apps" id="appDirectoryIcon" />
+            <span>Apps</span>
+          </button>
+          <div class="leave-room" role="button" tabindex="0" title="Leave Room">
+            <i class="fas fa-right-from-bracket"></i><span>Leave Room</span>
+          </div>
+        </div>
+      </nav>
+      <div class="second-navbar">
+        <div class="room-type">Public Room</div>
+        <div class="room-name">*</div>
+        <div class="room-type-group">
+          <div class="room-uptime">*</div>
+          <div class="room-id">*</div>
+        </div>
+      </div>
+      <div class="chat-container"></div>
+      <div class="invite-section" id="inviteSection">
+        <button
+          id="toggleInvite"
+          class="invite-toggle"
+          aria-label="Hide invite link"
+          aria-expanded="true"
+          title="Hide invite link"
+        >
+          <i class="fas fa-chevron-down"></i>
+        </button>
+        <div class="invite-text">
+          Invite friends to your room with this link:
+        </div>
+        <div class="invite-container">
+          <div class="invite-link" id="inviteLink"></div>
+          <button id="copyInviteLink" aria-label="Copy invite link">
+            <img src="images/icons/copy.svg" alt="Copy" />
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Emote autocomplete container -->
+    <div id="emoteAutocomplete" class="emote-autocomplete"></div>
+
+    <!-- Custom Modal -->
+    <div id="customModal" class="custom-modal">
+      <div class="modal-content">
+        <span class="close-modal-btn">&times;</span>
+        <h3 id="modalTitle">Modal Title</h3>
+        <p id="modalMessage">Modal message goes here.</p>
+        <div id="modalInputContainer" style="display: none">
+          <input
+            type="text"
+            id="modalInput"
+            maxlength="6"
+            pattern="[0-9]*"
+            inputmode="numeric"
+          />
+          <p class="input-error" id="modalInputError"></p>
+        </div>
+        <div class="modal-buttons">
+          <button id="modalCancelBtn" class="modal-btn">Cancel</button>
+          <button id="modalConfirmBtn" class="modal-btn modal-confirm-btn">
+            Confirm
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="featureAnnounce" class="feature-announce-overlay">
+      <div class="feature-announce-box">
+        <div class="feature-announce-head">
+          <div class="feature-announce-icon">
+            <i class="fas fa-square-poll-vertical"></i>
+          </div>
+          <div>
+            <h2 class="feature-announce-title">Polls</h2>
+            <p class="feature-announce-sub">New in every room</p>
+          </div>
+        </div>
+        <div class="feature-announce-body">
+          <p class="feature-announce-lead">
+            Ask the room a question and let everyone vote.
+          </p>
+          <div class="feature-announce-ways">
+            <div class="feature-announce-way">
+              <i class="fas fa-th"></i>Apps, then Polls
+            </div>
+            or type
+            <div class="feature-announce-way code">/poll</div>
+          </div>
+          <div class="feature-announce-row ask">
+            <div class="feature-announce-row-icon">
+              <i class="fas fa-pen"></i>
+            </div>
+            <div>
+              <b>Ask</b>
+              <p>
+                A question, 2 to 6 answers and 2 to 5 minutes. It ends once
+                everyone has voted or the time is up, and you can end your
+                own poll whenever you like.
+              </p>
+            </div>
+          </div>
+          <div class="feature-announce-row vote">
+            <div class="feature-announce-row-icon">
+              <i class="fas fa-check-to-slot"></i>
+            </div>
+            <div>
+              <b>Vote</b>
+              <p>
+                A New poll tag shows next to Apps when someone starts one.
+                Results stay hidden until you vote, then you see the numbers
+                and who picked what.
+              </p>
+              <div class="feature-announce-demo">
+                <div class="feature-announce-bar lead">
+                  <span>Pizza</span>
+                  <div class="feature-announce-track">
+                    <div class="feature-announce-fill" style="width: 67%"></div>
+                  </div>
+                  <span>67%</span>
+                </div>
+                <div class="feature-announce-bar">
+                  <span>Burgers</span>
+                  <div class="feature-announce-track">
+                    <div class="feature-announce-fill" style="width: 33%"></div>
+                  </div>
+                  <span>33%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="feature-announce-foot">
+            <button class="feature-announce-btn" id="featureAnnounceClose">
+              Got it
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <audio id="joinSound" src="audio/ding.mp3"></audio>
+    <audio id="leaveSound" src="audio/ding.mp3"></audio>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <!-- Shared staff UI kit (modals, menus, toasts) -->
+    <script src="js/modernnotify.min.js?v=1.1.0"></script>
+    <script src="js/notify.js?v=1.0.0"></script>
+    <script src="js/staff-ui.js?v=1.11.2"></script>
+    <script src="js/desk.js?v=1.2.7"></script>
+    <script src="js/word-filter-client.js?v=2.3.2"></script>
+    <script src="js/identity.js?v=1.1.1"></script>
+    <script src="js/connection-overlay.js?v=1.2.0"></script>
+    <script src="js/room-client.js?v=3.32.6"></script>
+    <script src="js/talkoboard.js?v=4.17.2"></script>
+    <script src="js/theme-editor.js?v=3.2.0"></script>
+
+    <script src="js/games-client.js?v=4.21.0"></script>
+    <script src="js/polls.js?v=1.0.0"></script>
+
+    <!-- Feature announcement logic -->
+    <script src="js/rules-modal.js?v=1.4.0"></script>
+    <script src="js/staff-guide-modal.js?v=1.1.0"></script>
+    <script src="js/feature-announce.js?v=1.1.0"></script>
+    <script src="js/first-visit.js?v=2.0.0"></script>
+    <!-- Developer notices. Loaded after room-client.js, which publishes the
+         socket this reuses, so a notice posted now reaches people mid-chat. -->
+    <script src="js/announce.js?v=1.2.0"></script>
+    <script src="js/warning.js?v=1.1.0"></script>
+    <script src="js/staff-key.js?v=1.0.0"></script>
+    <script src="js/interview.js?v=1.0.0"></script>
+  </body>
+</html>
